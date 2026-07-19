@@ -158,9 +158,9 @@ onset 定位要求模型保留足够的时间分辨率。仅对完整片段执�
 
 $$
 \tilde{x}_{c,t}=
-\operatorname{clip}\left(
-\frac{x_{c,t}-\operatorname{median}(x_c)}
-{1.4826\operatorname{MAD}(x_c)+\varepsilon},
+\mathrm{clip}\left(
+\frac{x_{c,t}-\mathrm{median}(x_c)}
+{1.4826\,\mathrm{MAD}(x_c)+\varepsilon},
 -q,q
 \right),
 $$
@@ -305,10 +305,10 @@ $$
 
 $$
 \mathcal{L}_{\mathrm{suff}}=
-\left|\operatorname{sg}[z(X)]-z(X\odot g)\right|,
+\left|\mathrm{sg}[z(X)]-z(X\odot g)\right|,
 $$
 
-其中 $\operatorname{sg}$ 表示停止梯度，避免原始分支为缩小差值而反向适配软门控。
+其中 $\mathrm{sg}$ 表示停止梯度，避免原始分支为缩小差值而反向适配软门控。
 
 必要性损失要求移除高分通道后，阳性样本的发作 logit 至少下降给定间隔 $m$：
 
@@ -376,7 +376,7 @@ $$
 
 $$
 B_k=\rho_1\bar b_k
-+\rho_2\Delta\operatorname{logit}(\bar p_k)
++\rho_2\Delta\mathrm{logit}(\bar p_k)
 +\rho_3\max_c r_{c,k}
 -\rho_4Q_k^{\mathrm{artifact}},
 $$
@@ -385,7 +385,7 @@ $$
 
 $$
 R_k=
-w_p\Delta\operatorname{logit}(\bar p_k)
+w_p\Delta\mathrm{logit}(\bar p_k)
 +w_e\Delta E_k
 +w_s\Delta S_k,
 $$
