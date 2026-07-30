@@ -6,8 +6,19 @@
 
 由于比赛数据格式、采样率、通道配置、片段长度及 onset 标注粒度尚未完全公开，文中首先给出合理工程假设。实际数据到位后，应通过数据审计和患者级交叉验证校准采样率、滤波带宽、窗口长度、模型容量、判定阈值及后处理参数，不将初始参数直接视为最终配置。
 
+## 研究背景与任务依据
+
+癫痫是以反复、非诱发性发作为主要表现的慢性脑部疾病。世界卫生组织统计显示，全球约有 5 000 万癫痫患者，疾病负担涉及意外伤害、过早死亡、长期照护及社会功能受限等多个方面[1]。国际抗癫痫联盟（ILAE）从复发风险和癫痫综合征等维度给出了临床定义[2]，并将经过两种可耐受、选择适当且使用充分的抗发作药物方案后仍未获得持续无发作界定为药物难治性癫痫[3]。对于此类患者，准确辨识发作状态、发作起始时刻及异常活动最早涉及的脑区，是术前评估和后续治疗路径设计的重要依据。
+
+立体定向脑电图（SEEG）通过植入深部电极，对皮层及深部结构进行高时间分辨率记录，能够从三维空间观察癫痫活动的起始、募集和传播过程[4]。与头皮脑电相比，SEEG 更接近局部神经群体活动，但其临床记录通常具有通道多、时间长、植入位置个体化和信号形态差异显著等特点。发作起始模式既可能表现为低电压快活动，也可能表现为低频周期性放电或其他节律演化形式，现有研究指出不同模式的命名和判读标准仍存在差异[5]。因此，单一幅值阈值、固定频带能量或静态通道相关性难以稳定覆盖全部患者和发作类型。
+
+既往 SEEG 量化研究已从频谱变化、激活时序和网络连接等角度刻画致痫相关结构。癫痫原性指数（Epileptogenicity Index，EI）将高频活动与发作募集延迟结合，用于评估植入结构在发作过程中的参与程度[6]；连接癫痫原性指数（cEI）进一步引入有向连接外流信息，对部分慢起始模式表现出更好的起始区估计能力[7]。人类颅内记录研究还表明，癫痫发作具有跨空间尺度的传播与耦合演化特征[8]。这些证据说明，发作检测不宜仅作为片段级二分类问题处理，而应同时建模状态转变、起始边界、早期通道募集和跨通道动态传播关系。
+
+深度学习能够从原始或预处理脑电中学习多层次表征，为减少人工特征依赖和提高长时程数据筛查效率提供了方法基础；但现有研究也反复指出，样本规模、数据异质性、患者间泛化及结果可解释性仍是脑电智能分析走向临床应用的主要限制[9]。本赛题要求模型同时输出发作状态、六位小数概率、片段内 onset 以及按重要性排序的 Top-10 通道，并考察推理时延和算力占用[10]。据此，本方案将多任务识别、机制一致性解释和轻量化推理纳入同一技术路线，输出用于疑似事件筛查和专家复核。需要特别说明的是，发作起始区（SOZ）、致痫区（EZ）及手术处理区域属于不同层级的临床概念[11]；模型给出的 Top-10 仅表示当前植入覆盖范围内与本次状态转变密切相关的记录通道，不能脱离原始波形、影像和多学科评估独立用于手术决策。
+
 ## 目录
 
+0. [研究背景与任务依据](#研究背景与任务依据)
 1. [总体技术路线](#一总体技术路线)
 2. [任务难点与设计原则](#二任务难点与设计原则)
 3. [数据预处理与样本构建](#三数据预处理与样本构建)
@@ -19,6 +30,7 @@
 9. [训练验证与消融实验设计](#九训练验证与消融实验设计)
 10. [预期优势与风险控制](#十预期优势与风险控制)
 11. [最终技术方案摘要](#十一最终技术方案摘要)
+12. [参考文献](#参考文献)
 
 ---
 
@@ -707,6 +719,32 @@ onset 标注可能存在阅图者差异和时间精度限制。训练时可将�
 ## 十一、最终技术方案摘要
 
 本方案面向多通道 SEEG 发作状态检测，提出质量感知的状态转变与动态传播联合网络 QST-DPGNet。数据侧通过患者级隔离、近重复指纹、元数据对照模型和患者身份探针排查泄漏；模型侧以多尺度时域—时频编码为基础，通过解剖—功能动态双图描述发作前基线、onset 早期和传播阶段的网络变化，并设置片段状态头、帧级状态头、onset 边界头和通道募集头，在统一机制链上生成二分类标签、六位小数发作概率、片段内 onset 及 Top-10 通道。onset 由状态持续性、边界峰值和变化点证据联合确定；阳性通道排序限定在 onset 早期窗口，综合募集强度、激活潜伏期、节律演化、动态图外流、跨发作重复性和伪迹风险，并通过充分性、必要性及扰动稳定性损失直接优化排序忠实性。在可靠坐标和个体影像可用时，条件性执行接点解剖映射、脑区候选分数聚合和三维传播展示；坐标缺失、配准超限或定位不稳定时自动退回接点级输出并保留弃权标记。该定位仅表示当前植入覆盖范围内的候选 SOZ 接点与早期传播网络，不属于分布式脑源逆成像，也不推断未覆盖脑区。方案设置手工特征基线、共享 TCN 强基线、候选主模型和部署模型四级体系，以预先确定的保留门槛决定复杂模块是否进入最终方案，并明确不将 Top-10 或脑区候选分数直接解释为致痫区或手术靶点。
+
+---
+
+## 参考文献
+
+[1] World Health Organization. [Epilepsy](https://www.who.int/news-room/fact-sheets/detail/epilepsy). WHO Fact Sheet, 2024-02-07.
+
+[2] Fisher R S, Acevedo C, Arzimanoglou A, et al. [ILAE official report: a practical clinical definition of epilepsy](https://pubmed.ncbi.nlm.nih.gov/24730690/). *Epilepsia*, 2014, 55(4): 475-482. DOI: 10.1111/epi.12550.
+
+[3] Kwan P, Arzimanoglou A, Berg A T, et al. [Definition of drug resistant epilepsy: consensus proposal by the ad hoc Task Force of the ILAE Commission on Therapeutic Strategies](https://pubmed.ncbi.nlm.nih.gov/19889013/). *Epilepsia*, 2010, 51(6): 1069-1077. DOI: 10.1111/j.1528-1167.2009.02397.x.
+
+[4] Alomar S, Jones J, Maldonado A, Gonzalez-Martinez J. [The Stereo-Electroencephalography Methodology](https://pubmed.ncbi.nlm.nih.gov/26615111/). *Neurosurgery Clinics of North America*, 2016, 27(1): 83-95. DOI: 10.1016/j.nec.2015.08.003.
+
+[5] Abdallah C, Mansilla D, Minato E, et al. [Systematic review of seizure-onset patterns in stereo-electroencephalography: Current state and future directions](https://pubmed.ncbi.nlm.nih.gov/38733701/). *Clinical Neurophysiology*, 2024, 163: 112-123. DOI: 10.1016/j.clinph.2024.04.016.
+
+[6] Bartolomei F, Chauvel P, Wendling F. [Epileptogenicity of brain structures in human temporal lobe epilepsy: a quantified study from intracerebral EEG](https://pubmed.ncbi.nlm.nih.gov/18556663/). *Brain*, 2008, 131(7): 1818-1830. DOI: 10.1093/brain/awn111.
+
+[7] Balatskaya A, Roehri N, Lagarde S, et al. [The Connectivity Epileptogenicity Index (cEI), a method for mapping the different seizure onset patterns in StereoElectroEncephalography recorded seizures](https://pubmed.ncbi.nlm.nih.gov/32622336/). *Clinical Neurophysiology*, 2020, 131(8): 1947-1955. DOI: 10.1016/j.clinph.2020.05.029.
+
+[8] Martinet L E, Fiddyment G, Madsen J R, et al. [Human seizures couple across spatial scales through travelling wave dynamics](https://pubmed.ncbi.nlm.nih.gov/28374740/). *Nature Communications*, 2017, 8: 14896. DOI: 10.1038/ncomms14896.
+
+[9] Roy Y, Banville H, Albuquerque I, et al. [Deep learning-based electroencephalography analysis: a systematic review](https://pubmed.ncbi.nlm.nih.gov/31151119/). *Journal of Neural Engineering*, 2019, 16(5): 051001. DOI: 10.1088/1741-2552/ab260c.
+
+[10] 琶洲算法大赛组委会. [脑机接口：基于 SEEG 的癫痫发作状态智能检测](https://www.aicompetition-pz.com/topic_detail/34). 赛题官方页面.
+
+[11] Rosenow F, Lüders H. [Presurgical evaluation of epilepsy](https://pubmed.ncbi.nlm.nih.gov/11522572/). *Brain*, 2001, 124(9): 1683-1700. DOI: 10.1093/brain/124.9.1683.
 
 ---
 
