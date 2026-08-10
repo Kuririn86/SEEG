@@ -1,0 +1,116 @@
+\documentclass[tikz,border=10pt]{standalone}
+\usepackage{ctex}
+\usepackage{fontspec}
+\usepackage{amsmath,amssymb}
+\setmainfont{Times New Roman}
+\setCJKmainfont[AutoFakeBold]{SimSun.ttf}
+\usetikzlibrary{arrows.meta,positioning,fit,backgrounds}
+\definecolor{navy}{RGB}{31,58,83}
+\definecolor{blue}{RGB}{70,116,150}
+\definecolor{teal}{RGB}{24,132,137}
+\definecolor{orange}{RGB}{198,132,40}
+\definecolor{coral}{RGB}{194,83,72}
+\definecolor{pale}{RGB}{247,249,251}
+% 可复用的小型科学示意图：全部为 TikZ 矢量元素。
+\newcommand{\waveicon}{\tikz[baseline=-0.5ex,x=0.23cm,y=0.18cm]{
+  \draw[navy,thick,smooth] plot coordinates {(0,2.6)(1,2.8)(2,2.4)(3,2.9)(4,2.5)(5,2.7)(6,2.45)(7,2.8)(8,2.55)};
+  \draw[teal,thick,smooth] plot coordinates {(0,1.5)(1,1.6)(2,1.4)(3,1.7)(4,1.35)(5,1.65)(6,1.4)(7,1.55)(8,1.45)};
+  \draw[coral,thick,smooth] plot coordinates {(0,0.45)(1,0.5)(2,0.35)(3,1.0)(3.35,-0.15)(3.7,0.85)(4.1,0.35)(5,0.5)(6,0.4)(7,0.55)(8,0.45)};
+}}
+\newcommand{\cleanicon}{\tikz[baseline=-0.5ex,x=0.22cm,y=0.18cm]{
+  \draw[gray!55,thin,smooth] plot coordinates {(0,2.3)(1,1.8)(2,2.5)(3,1.6)(4,2.6)(5,1.7)(6,2.3)(7,1.8)(8,2.4)};
+  \draw[->,navy,thick] (8.4,1.1)--(10.0,1.1);
+  \draw[teal,thick,smooth] plot coordinates {(10.4,1.9)(11.4,2.05)(12.4,1.8)(13.4,2.1)(14.4,1.85)(15.4,2.0)(16.4,1.9)(17.4,2.05)(18.4,1.9)};
+  \foreach \x/\c in {10.5/navy,11.6/navy,12.7/teal,13.8/teal,14.9/orange,16.0/coral,17.1/gray} \fill[\c] (\x,0.2) rectangle ++(0.8,0.45);
+}}
+\newcommand{\scaleicon}{\tikz[baseline=-0.5ex,x=0.22cm,y=0.18cm]{
+  \draw[navy,thick] (0,2.4)--(2.0,2.4); \draw[navy,thick] (0.8,2.1)--(1.2,2.7);
+  \draw[teal,thick] (2.6,1.5)--(5.5,1.5); \draw[teal,thick] (3.3,1.2)--(4.8,1.8);
+  \draw[coral,thick] (6.1,0.6)--(9.3,0.6); \draw[coral,thick] (6.4,0.3)--(8.9,0.9);
+}}
+\newcommand{\spectrogramicon}{\tikz[baseline=-0.5ex,x=0.24cm,y=0.24cm]{
+  \foreach \x/\c in {0/navy,1/navy,2/blue,3/teal,4/teal,5/orange,6/coral,7/coral}{
+    \fill[\c] (\x,0) rectangle ++(0.9,0.9);
+    \fill[\c!70] (\x,1) rectangle ++(0.9,0.9);
+    \fill[\c!40] (\x,2) rectangle ++(0.9,0.9);
+  }
+}}
+\newcommand{\gateicon}{\tikz[baseline=-0.5ex,x=0.28cm,y=0.28cm]{
+  \draw[->,navy,thick] (0,2)--(2.2,1.2); \node[navy] at (0.2,2.35) {\scriptsize 时域};
+  \draw[->,teal,thick] (0,0.35)--(2.2,1.05); \node[teal] at (0.2,0) {\scriptsize 时频};
+  \fill[orange!25,draw=orange,thick] (2.2,0.65) circle (0.55); \node at (2.2,0.65) {$G$};
+  \draw[->,orange,thick] (2.8,0.65)--(5.0,0.65); \node[orange] at (4.7,1.0) {\scriptsize 融合};
+}}
+\newcommand{\stateicon}{\tikz[baseline=-0.5ex,x=0.28cm,y=0.25cm]{
+  \draw[gray!60,->] (0,0)--(7.0,0);
+  \draw[navy,very thick,smooth] plot coordinates {(0,0.25)(1,0.28)(2,0.3)(3,0.45)(4,1.3)(5,2.0)(6,2.05)(7,2.15)};
+  \draw[orange,dashed,thick] (3.7,0)--(3.7,2.35); \node[orange] at (3.7,2.65) {\scriptsize onset};
+}}
+\newcommand{\clipicon}{\tikz[baseline=-0.5ex,x=0.18cm,y=0.18cm]{\draw[gray!50] (0,0) rectangle (5,0.7); \fill[teal] (0,0) rectangle (4.1,0.7);}}
+\newcommand{\frameicon}{\tikz[baseline=-0.5ex,x=0.18cm,y=0.18cm]{\draw[navy,thick,smooth] plot coordinates {(0,0.2)(1,0.25)(2,0.3)(3,0.6)(4,1.4)(5,1.55)};}}
+\newcommand{\onseticon}{\tikz[baseline=-0.5ex,x=0.18cm,y=0.18cm]{\draw[orange,thick,smooth] plot coordinates {(0,0.15)(1,0.18)(2,0.25)(3,1.65)(4,0.45)(5,0.2)};}}
+\newcommand{\channelicon}{\tikz[baseline=-0.5ex,x=0.18cm,y=0.18cm]{\foreach \x/\c in {0/navy,1/blue,2/teal,3/teal!60,4/orange!60,5/orange,6/coral,7/coral!70}{\fill[\c] (\x,0) rectangle ++(0.85,0.75);}}}
+\begin{document}
+\begin{tikzpicture}[
+  font=\small,
+  >=Latex,
+  base/.style={draw=navy, very thick, rounded corners=3pt, fill=pale, align=center, inner sep=7pt},
+  branch/.style={draw=blue, thick, rounded corners=3pt, fill=blue!5, align=center, minimum width=3.25cm, minimum height=1.25cm, inner sep=6pt},
+  head/.style={draw=coral, thick, rounded corners=3pt, fill=coral!5, align=center, minimum width=2.8cm, minimum height=0.85cm, inner sep=5pt},
+  submit/.style={draw=orange, very thick, rounded corners=3pt, fill=orange!7, align=center, minimum width=3.15cm, minimum height=0.95cm, inner sep=5pt},
+  optional/.style={draw=teal, thick, dashed, rounded corners=3pt, fill=teal!4, align=center, inner sep=6pt},
+  flow/.style={->, very thick, draw=navy},
+  optflow/.style={->, thick, dashed, draw=teal}
+]
+\node[anchor=west, font=\bfseries\Large, text=navy] at (0,8.25) {SEEG 发作检测模型：基础推理链路与四项比赛输出};
+\node[anchor=east, text=gray] at (24.0,8.25) {从左到右读取；实线为默认链路，虚线为验证后增强};
+\draw[gray!35] (0,7.85)--(24.0,7.85);
+
+\node[base, text width=2.55cm, minimum height=3.2cm] (raw) at (1.45,4.65) {\textbf{1 原始输入}\\[3pt]\waveicon\\[-1pt]多通道 SEEG\\$X\in\mathbb{R}^{B\times C\times T}$\\通道 ID＋采样信息};
+
+\node[base, text width=2.45cm, minimum height=3.2cm, right=7mm of raw] (prep) {\textbf{2 预处理与切窗}\\[3pt]\cleanicon\\[-1pt]重采样、滤波\\坏道与伪迹标记\\MAD 标准化＋掩码};
+
+\node[branch] (time) at (9.35,5.75) {\textbf{时域分支}\quad\scaleicon\\共享多尺度一维卷积＋SiLU\\识别尖波、节律和波形演化};
+\node[branch, below=5mm of time] (tf) {\textbf{时频分支}\quad\spectrogramicon\\STFT＋轻量频带映射\\识别频带能量和频率迁移};
+\node[draw=blue, rounded corners=5pt, inner sep=8pt, fit=(time)(tf), label={[text=navy, font=\bfseries]above:3 双分支共享编码}] (encoder) {};
+
+\node[base, text width=2.65cm, minimum height=2.55cm, right=8mm of encoder] (gate) {\textbf{4 帧率对齐与门控融合}\\[2pt]\gateicon\\[-2pt]$H=G H_{time}+(1-G)H_{tf}$\\自动权衡两类证据};
+
+\node[base, text width=2.65cm, minimum height=2.55cm, right=8mm of gate] (tcn) {\textbf{5 长程 TCN}\\[2pt]\stateicon\\[-2pt]背景→起始→发作演化\\排除孤立尖波};
+
+\draw[flow] (raw)--(prep);
+\draw[flow] (prep.east)--++(0.35,0)|-(time.west);
+\draw[flow] (prep.east)--++(0.35,0)|-(tf.west);
+\draw[flow] (time.east)--++(0.3,0)|-(gate.west);
+\draw[flow] (tf.east)--++(0.3,0)|-(gate.west);
+\draw[flow] (gate)--(tcn);
+
+\node[head, right=9mm of tcn, yshift=2.05cm] (clip) {\textbf{片段状态头}\quad\clipicon\\$p_{clip}$};
+\node[head, below=3mm of clip] (frame) {\textbf{帧级状态头}\quad\frameicon\\$p_{state,k}$};
+\node[head, below=3mm of frame] (boundary) {\textbf{onset 边界头}\quad\onseticon\\$p_{onset,k}$};
+\node[head, below=3mm of boundary] (channel) {\textbf{通道贡献头}\quad\channelicon\\$I_c^{model}$};
+\node[draw=coral, rounded corners=5pt, inner sep=7pt, fit=(clip)(channel)] (heads) {};
+\node[font=\bfseries, text=navy, above=2pt of heads] {6 四个任务头};
+\draw[flow] (tcn.east)--++(0.35,0)|-(clip.west);
+\draw[flow] (tcn.east)--++(0.35,0)|-(frame.west);
+\draw[flow] (tcn.east)--++(0.35,0)|-(boundary.west);
+\draw[flow] (tcn.east)--++(0.35,0)|-(channel.west);
+
+\node[submit, right=9mm of clip] (prob) {概率校准＋阈值\\\textbf{标签＋六位小数概率}};
+\node[submit, right=9mm of frame, yshift=-5mm] (onset) {滑窗融合＋持续性判定\\边界峰值＋系统延迟校正\\\textbf{onset 时间}};
+\node[submit, right=9mm of channel, yshift=-1mm] (topten) {伪迹惩罚＋稳定性验证\\按贡献度排序\\\textbf{官方 Top-10 通道}};
+\draw[flow] (clip)--(prob);
+\draw[flow] (frame.east)--++(0.35,0)|-(onset.west);
+\draw[flow] (boundary.east)--++(0.35,0)|-(onset.west);
+\draw[flow] (channel)--(topten);
+
+\node[optional, text width=3.1cm, below=9mm of gate] (graph) {\textbf{动态通道图（可选）}\\从融合特征估计统计领先关系\\只有患者级验证稳定改善时启用};
+\node[optional, text width=3.1cm, left=5mm of graph] (alternatives) {\textbf{研究性消融}\\Morlet 对照 STFT\\SwiGLU 对照前馈层 SiLU};
+\node[optional, text width=3.1cm, right=5mm of graph] (space) {\textbf{空间解释（条件模块）}\\坐标与接点--脑区映射\\不参与无空间数据的基础提交};
+\draw[optflow] (graph.north)--(gate.south);
+\draw[optflow] (alternatives.north)--(encoder.south);
+\draw[optflow] (space.north)--(tcn.south);
+
+\node[draw=orange, rounded corners=3pt, fill=orange!6, align=left, text width=22.7cm, inner sep=7pt] at (12.0,-2.85) {\textbf{结果解释边界：}Top-10 回答“哪些通道对当前模型判断最重要”；早期募集分析回答“哪些已记录通道较早出现持续异常”。二者可能重合，但都不能直接等同于 SOZ、EZ 或手术靶点。};
+\end{tikzpicture}
+\end{document}
