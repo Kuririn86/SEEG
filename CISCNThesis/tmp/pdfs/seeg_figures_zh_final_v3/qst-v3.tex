@@ -1,0 +1,53 @@
+\documentclass[tikz,border=10pt]{standalone}
+\usepackage{ctex}
+\usepackage{fontspec}
+\setmainfont{Times New Roman}
+\setCJKmainfont[AutoFakeBold]{SimSun.ttf}
+\usetikzlibrary{arrows.meta,positioning,fit,backgrounds}
+\definecolor{navy}{RGB}{34,62,88}
+\definecolor{teal}{RGB}{27,135,139}
+\definecolor{orange}{RGB}{202,137,43}
+\definecolor{coral}{RGB}{197,91,78}
+\definecolor{pale}{RGB}{246,249,251}
+\begin{document}
+\begin{tikzpicture}[
+  font=\small,
+  >=Latex,
+  flow/.style={draw=navy, very thick, rounded corners=3pt, fill=pale, align=center, minimum height=2.25cm, text width=3.1cm, inner sep=7pt},
+  output/.style={draw=coral, very thick, rounded corners=3pt, fill=coral!5, align=left, minimum height=1.25cm, text width=3.45cm, inner sep=7pt},
+  optional/.style={draw=teal, thick, dashed, rounded corners=3pt, fill=teal!4, align=center, minimum height=1.15cm, text width=3.0cm, inner sep=6pt},
+  arrow/.style={->, very thick, draw=navy}
+]
+\node[anchor=west, font=\bfseries\Large, text=navy] at (0,5.25) {V3 默认模型：从 SEEG 到四项比赛输出};
+\node[anchor=east, text=gray] at (19.8,5.25) {实线为基础链路；虚线为验证后才启用的增强模块};
+\draw[gray!35] (0,4.85)--(19.8,4.85);
+
+\node[flow] (input) at (1.7,3.0) {\textbf{1 输入与预处理}\\[3pt]多通道 SEEG\\滤波、标准化\\通道/时间掩码};
+\node[flow, right=8mm of input] (encode) {\textbf{2 共享特征编码}\\[3pt]时域卷积：看波形\\STFT：看频谱\\各通道共享参数};
+\node[flow, right=8mm of encode] (fusion) {\textbf{3 门控融合}\\[3pt]自动权衡时域与时频证据\\$H=G H_{time}+(1-G)H_{tf}$};
+\node[flow, right=8mm of fusion] (tcn) {\textbf{4 长程 TCN}\\[3pt]观察异常是否持续\\区分孤立尖波与发作演化};
+
+\draw[arrow] (input)--(encode);
+\draw[arrow] (encode)--(fusion);
+\draw[arrow] (fusion)--(tcn);
+
+\node[output, right=10mm of tcn, yshift=2.15cm] (clip) {\textbf{片段状态头}\quad 发作标签＋校准概率};
+\node[output, below=3mm of clip] (frame) {\textbf{帧级状态头}\quad 每个时间帧的状态概率};
+\node[output, below=3mm of frame] (onset) {\textbf{onset 边界头}\quad 起点候选＋持续性判定};
+\node[output, below=3mm of onset] (channel) {\textbf{通道贡献头}\quad 官方 Top-10 排序};
+\draw[arrow] (tcn.east)--++(0.35,0)|-(clip.west);
+\draw[arrow] (tcn.east)--++(0.35,0)|-(frame.west);
+\draw[arrow] (tcn.east)--++(0.35,0)|-(onset.west);
+\draw[arrow] (tcn.east)--++(0.35,0)|-(channel.west);
+
+\node[optional, below=8mm of encode] (wavelet) {Morlet 小波\\仅作 STFT 对照消融};
+\node[optional, below=8mm of fusion] (graph) {动态通道图\\仅描述统计领先关系};
+\node[optional, below=8mm of tcn] (space) {坐标与脑区映射\\仅在数据完整时启用};
+\draw[teal, dashed, ->, thick] (wavelet)--(encode);
+\draw[teal, dashed, ->, thick] (graph)--(fusion);
+\draw[teal, dashed, ->, thick] (space)--(tcn);
+
+\node[draw=orange, rounded corners=3pt, fill=orange!7, align=left, text width=18.7cm, inner sep=7pt, below=9mm of graph] {
+\textbf{解释边界：}官方 Top-10 表示对模型判断最重要的通道；“最早募集通道”只作临床探索性附加结果。二者都不能直接等同于 SOZ、EZ 或手术靶点。};
+\end{tikzpicture}
+\end{document}

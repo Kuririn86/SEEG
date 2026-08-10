@@ -1,0 +1,45 @@
+\documentclass[tikz,border=10pt]{standalone}
+\usepackage{ctex}
+\usepackage{fontspec}
+\setmainfont{Times New Roman}
+\setCJKmainfont[AutoFakeBold]{SimSun.ttf}
+\usetikzlibrary{arrows.meta,positioning,shapes.geometric,fit}
+\definecolor{navy}{RGB}{34,62,88}
+\definecolor{teal}{RGB}{27,135,139}
+\definecolor{orange}{RGB}{202,137,43}
+\definecolor{coral}{RGB}{197,91,78}
+\definecolor{pale}{RGB}{246,249,251}
+\begin{document}
+\begin{tikzpicture}[
+  font=\small,
+  >=Latex,
+  process/.style={draw=navy, very thick, rounded corners=3pt, fill=pale, align=center, minimum height=1.7cm, text width=3.15cm, inner sep=7pt},
+  decide/.style={diamond, draw=orange, very thick, fill=orange!7, align=center, aspect=2.1, text width=2.5cm, inner sep=3pt},
+  result/.style={draw=coral, very thick, rounded corners=3pt, fill=coral!5, align=center, minimum height=1.55cm, text width=3.2cm, inner sep=7pt},
+  optional/.style={draw=teal, very thick, rounded corners=3pt, fill=teal!5, align=center, minimum height=1.55cm, text width=3.2cm, inner sep=7pt},
+  arrow/.style={->, very thick, draw=navy}
+]
+\node[anchor=west, font=\bfseries\Large, text=navy] at (0,5.15) {V3 onset 定位：先得到粗起点，再按基线质量决定是否精修};
+\node[anchor=east, text=gray] at (20.6,5.15) {不把第一次 $p>0.5$ 直接当作 onset};
+\draw[gray!35] (0,4.75)--(20.6,4.75);
+
+\node[process] (windows) at (1.7,2.9) {\textbf{1 重叠滑窗预测}\\同一时刻可能有多个窗口结果};
+\node[process, right=7mm of windows] (merge) {\textbf{2 Hann 加权融合}\\重建连续的状态概率 $p_k$ 与边界概率 $b_k$};
+\node[process, right=7mm of merge] (coarse) {\textbf{3 粗 onset}\\状态持续上升\\边界出现峰值\\满足最短持续时间};
+\node[decide, right=9mm of coarse] (quality) {粗 onset 前是否有足够的合格基线？};
+\node[optional, above right=7mm and 11mm of quality] (refine) {\textbf{4A 可选精修}\\计算相对基线变化\\只在粗 onset 邻域调整};
+\node[result, below right=7mm and 11mm of quality] (keep) {\textbf{4B 保留粗 onset}\\基线不足或片段左删失\\不强行使用动态图};
+\node[result, right=13mm of quality] (final) {\textbf{5 最终输出}\\校正系统延迟\\给出 onset＋置信度\\记录异常情况};
+
+\draw[arrow] (windows)--(merge);
+\draw[arrow] (merge)--(coarse);
+\draw[arrow] (coarse)--(quality);
+\draw[arrow] (quality)--node[above left]{是}(refine);
+\draw[arrow] (quality)--node[below left]{否}(keep);
+\draw[arrow] (refine.east)-|(final.north);
+\draw[arrow] (keep.east)-|(final.south);
+
+\node[draw=orange, rounded corners=3pt, fill=orange!7, align=left, text width=19.5cm, inner sep=7pt] at (10.3,-1.15) {
+\textbf{候选点需要同时回答三个问题：}状态是否明显上升？边界是否清楚？上升后是否持续？伪迹风险高或只出现孤立尖峰时，不触发 onset。};
+\end{tikzpicture}
+\end{document}

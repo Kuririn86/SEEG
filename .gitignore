@@ -1,0 +1,44 @@
+# Local competition data and support packages
+Dataset/
+SecRnd/
+
+# Python caches and environments
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+
+# Local training and experiment outputs
+checkpoints/
+outputs/
+runs/
+wandb/
+*.ckpt
+*.joblib
+*.pth
+*.pt
+
+# Local container images and editable roots
+*.sif
+*.sqsh
+
+# Large generated figure exports (PNG/SVG/PDF and sources remain versioned)
+assets/figures/*.tif
+assets/figures/*.tiff
+
+# LaTeX build intermediates
+*.aux
+*.fdb_latexmk
+*.fls
+*.log
+*.out
+*.synctex.gz
+*.toc
+
+# Notebook and editor state
+.ipynb_checkpoints/
+.idea/
+.vscode/

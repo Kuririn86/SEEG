@@ -1,0 +1,20 @@
+[data]
+root = "Dataset/sampleData"
+labels = "Dataset/sampleData/label.csv"
+sampling_rate_hz = 2000.0
+record_duration_seconds = 60.0
+signal_key = "signal"
+valid_samples_key = "valid_samples"
+
+[channel_policy]
+preserve_all_raw_channels = true
+exclude_auxiliary_dc_from_neural_input = true
+auxiliary_dc_pattern = "^POL DC(?:0[1-9]|1[0-6])$"
+unknown_channel_action = "review"
+
+[preview]
+positive_sample = "train_000027"
+negative_sample = "train_000057"
+seconds_before_onset = 5.0
+seconds_after_onset = 5.0
+channels = 6

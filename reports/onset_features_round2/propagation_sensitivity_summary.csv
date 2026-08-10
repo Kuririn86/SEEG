@@ -1,0 +1,17 @@
+network_window_seconds,channel_policy,feature,records,median_abs_timing_error_seconds,mean_abs_timing_error_seconds,within_0_5_seconds_rate,within_1_second_rate,positive_contrast_rate,median_channels_used
+1.0,all_channels,lagged_outflow,5,0.37618499999999955,0.8295265999999998,0.6,0.8,1.0,124.0
+1.0,all_channels,mean_lagged_connectivity,5,1.9713119999999975,1.4380334000000006,0.4,0.4,0.4,124.0
+1.0,all_channels,network_density,5,0.9988150000000005,1.1290525999999996,0.4,0.6,0.8,124.0
+1.0,all_channels,propagation_participation,5,0.2898119999999995,0.44950860000000115,0.6,1.0,0.6,124.0
+1.5,all_channels,lagged_outflow,5,0.28159100000000237,0.3386017999999996,0.6,1.0,1.0,124.0
+1.5,all_channels,mean_lagged_connectivity,5,0.28159100000000237,0.3386017999999996,0.6,1.0,0.6,124.0
+1.5,all_channels,network_density,5,0.4036880000000025,0.7996030000000008,0.6,0.8,0.4,124.0
+1.5,all_channels,propagation_participation,5,0.2898119999999995,0.44950860000000115,0.6,1.0,0.6,124.0
+1.5,exclude_line50_gt20db,lagged_outflow,5,0.5011849999999995,1.0136017999999996,0.4,0.6,1.0,66.0
+1.5,exclude_line50_gt20db,mean_lagged_connectivity,5,0.5011849999999995,1.0386017999999997,0.4,0.6,0.4,66.0
+1.5,exclude_line50_gt20db,network_density,5,1.8463119999999975,1.5790525999999996,0.2,0.4,0.6,66.0
+1.5,exclude_line50_gt20db,propagation_participation,5,0.7488150000000005,1.0790525999999996,0.4,0.6,0.4,66.0
+2.0,all_channels,lagged_outflow,5,0.9036880000000025,1.1905278000000006,0.2,0.6,1.0,124.0
+2.0,all_channels,mean_lagged_connectivity,5,0.7287329999999983,0.6405278000000006,0.4,1.0,0.6,124.0
+2.0,all_channels,network_density,5,0.49881500000000045,1.2405278000000006,0.6,0.6,0.6,124.0
+2.0,all_channels,propagation_participation,5,0.2898119999999995,0.44950860000000115,0.6,1.0,0.6,124.0

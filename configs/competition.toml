@@ -1,0 +1,23 @@
+[competition]
+prediction_filename = "prediction.csv"
+onset_upper_bound_seconds = 60.0
+probability_decimals = 6
+require_global_threshold = true
+positive_top_k = 10
+
+[data]
+require_labels = true
+require_complete_train_labels_in_production = true
+preserve_raw_channel_ids = true
+exclude_auxiliary_dc = true
+
+[runtime]
+maximum_seconds = 18000
+single_gpu_default = true
+allow_network_downloads = false
+
+[stage0_smoke]
+enabled_only_by_explicit_flag = true
+probability = 0.0
+decision_threshold = 0.5
+onset_time = 0.0

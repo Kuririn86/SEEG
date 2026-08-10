@@ -1,0 +1,59 @@
+\contentsline {section}{摘要}{1}{section*.1}%
+\contentsline {section}{\numberline {1}总体技术路线}{3}{section.2}%
+\contentsline {subsection}{\numberline {1.1}数据条件的合理假设}{3}{subsection.4}%
+\contentsline {subsection}{\numberline {1.2}医学机制与算法设计映射}{5}{subsection.6}%
+\contentsline {subsection}{\numberline {1.3}核心技术假设与创新边界}{5}{subsection.8}%
+\contentsline {section}{\numberline {2}任务难点与设计原则}{7}{section.10}%
+\contentsline {section}{\numberline {3}数据预处理与样本构建}{8}{section.11}%
+\contentsline {subsection}{\numberline {3.1}数据审计与泄漏排查}{8}{subsection.12}%
+\contentsline {subsection}{\numberline {3.2}重采样与滤波}{8}{subsection.13}%
+\contentsline {subsection}{\numberline {3.3}坏道检测与伪迹处理}{9}{subsection.14}%
+\contentsline {subsection}{\numberline {3.4}参考重构}{9}{subsection.15}%
+\contentsline {subsection}{\numberline {3.5}幅值标准化}{9}{subsection.16}%
+\contentsline {subsection}{\numberline {3.6}滑窗切片与标签对齐}{10}{subsection.17}%
+\contentsline {subsection}{\numberline {3.7}跨受试者数据增强}{10}{subsection.18}%
+\contentsline {subsection}{\numberline {3.8}电极坐标与解剖映射（条件模块）}{11}{subsection.19}%
+\contentsline {section}{\numberline {4}发作状态识别模型设计}{12}{section.20}%
+\contentsline {subsection}{\numberline {4.1}输入张量}{12}{subsection.21}%
+\contentsline {subsection}{\numberline {4.2}主模型架构：QST-DPGNet}{12}{subsection.22}%
+\contentsline {subsubsection}{\numberline {4.2.1}局部时域特征提取}{12}{subsubsection.23}%
+\contentsline {subsubsection}{\numberline {4.2.2}时频特征增强}{12}{subsubsection.24}%
+\contentsline {subsubsection}{\numberline {4.2.3}解剖—功能动态双图}{13}{subsubsection.25}%
+\contentsline {subsubsection}{\numberline {4.2.4}长程时序依赖建模}{14}{subsubsection.26}%
+\contentsline {subsubsection}{\numberline {4.2.5}状态—边界—募集联合输出头}{14}{subsubsection.27}%
+\contentsline {subsubsection}{\numberline {4.2.6}损失函数}{14}{subsubsection.28}%
+\contentsline {subsubsection}{\numberline {4.2.7}Top-10 忠实性约束}{15}{subsubsection.29}%
+\contentsline {subsection}{\numberline {4.3}训练策略}{16}{subsection.30}%
+\contentsline {subsection}{\numberline {4.4}概率校准}{16}{subsection.31}%
+\contentsline {section}{\numberline {5}发作起始点定位方法}{17}{section.32}%
+\contentsline {subsection}{\numberline {5.1}状态与边界概率重建}{17}{subsection.33}%
+\contentsline {subsection}{\numberline {5.2}概率平滑与阈值滞回}{17}{subsection.34}%
+\contentsline {subsection}{\numberline {5.3}联合边界判定与变化点校正}{17}{subsection.35}%
+\contentsline {subsection}{\numberline {5.4}异常片段处理与定位置信度}{18}{subsection.36}%
+\contentsline {section}{\numberline {6}关键通道识别与候选起始网络估计}{19}{section.37}%
+\contentsline {subsection}{\numberline {6.1}onset 感知的证据窗口}{19}{subsection.38}%
+\contentsline {subsection}{\numberline {6.2}快速通道评分}{19}{subsection.39}%
+\contentsline {subsection}{\numberline {6.3}起始与传播分层}{20}{subsection.40}%
+\contentsline {subsection}{\numberline {6.4}离线归因验证}{20}{subsection.41}%
+\contentsline {subsection}{\numberline {6.5}稳定性与临床可读性}{20}{subsection.42}%
+\contentsline {subsection}{\numberline {6.6}空间约束与脑区级聚合（条件模块）}{21}{subsection.43}%
+\contentsline {subsection}{\numberline {6.7}定位不确定性与弃权机制}{21}{subsection.45}%
+\contentsline {section}{\numberline {7}推理与部署方案}{23}{section.46}%
+\contentsline {subsection}{\numberline {7.1}完整推理流水线}{23}{subsection.47}%
+\contentsline {subsection}{\numberline {7.2}快速推理与深度解释分层}{24}{subsection.57}%
+\contentsline {subsection}{\numberline {7.3}GPU 部署}{24}{subsection.58}%
+\contentsline {subsection}{\numberline {7.4}CPU 部署}{24}{subsection.59}%
+\contentsline {subsection}{\numberline {7.5}时延与内存控制}{24}{subsection.60}%
+\contentsline {subsection}{\numberline {7.6}异常输入处理}{25}{subsection.61}%
+\contentsline {section}{\numberline {8}模型轻量化与算力优化}{26}{section.62}%
+\contentsline {section}{\numberline {9}训练验证与消融实验设计}{28}{section.64}%
+\contentsline {subsection}{\numberline {9.1}实验层级}{28}{subsection.65}%
+\contentsline {subsection}{\numberline {9.2}评估指标}{28}{subsection.67}%
+\contentsline {subsection}{\numberline {9.3}消融实验矩阵}{29}{subsection.68}%
+\contentsline {section}{\numberline {10}预期优势与风险控制}{31}{section.70}%
+\contentsline {subsection}{\numberline {10.1}临床使用场景与责任边界}{31}{subsection.71}%
+\contentsline {subsection}{\numberline {10.2}方案优势}{31}{subsection.72}%
+\contentsline {subsection}{\numberline {10.3}风险及缓解措施}{32}{subsection.73}%
+\contentsline {section}{附录 A：初始工程参数建议}{33}{subsection.73}%
+\contentsline {section}{附录 B：提交前一致性检查}{34}{table.caption.74}%
+\contentsfinish 

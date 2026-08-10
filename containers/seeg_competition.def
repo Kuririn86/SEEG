@@ -1,0 +1,74 @@
+Bootstrap: localimage
+From: /home/tuoxiaoying/singularity/pytorch_25.10-py3.sif
+
+%labels
+    Author ACEHolix
+    Purpose "SEEG competition development and CUDA inference"
+    BaseImage "pytorch_25.10-py3.sif"
+    CompetitionNumPy "1.26.4"
+    CompetitionPyTorch "2.7.1+cu118"
+
+%files
+    containers/requirements-competition.txt /opt/seeg/container/requirements-competition.txt
+    containers/requirements-extra.txt /opt/seeg/container/requirements-extra.txt
+    containers/verify_environment.py /opt/seeg/container/verify_environment.py
+
+%post
+    set -eu
+    export DEBIAN_FRONTEND=noninteractive
+    export PIP_NO_CACHE_DIR=1
+    apt-get update
+    apt-get install -y --no-install-recommends \
+        build-essential \
+        ca-certificates \
+        cmake \
+        curl \
+        ffmpeg \
+        git \
+        graphviz \
+        libgl1 \
+        libglib2.0-0 \
+        libsndfile1 \
+        ninja-build \
+        p7zip-full \
+        pkg-config \
+        unzip \
+        zip
+    rm -rf /var/lib/apt/lists/*
+
+    python3 -m pip install --no-cache-dir --upgrade "pip<26" setuptools wheel
+    python3 -m pip uninstall -y \
+        flash-attn \
+        lightning-thunder \
+        nvidia-modelopt \
+        nvidia-resiliency-ext \
+        transformer-engine || true
+    python3 -m pip install --no-cache-dir --force-reinstall \
+        --index-url https://download.pytorch.org/whl/cu118 \
+        torch==2.7.1+cu118 \
+        torchvision==0.22.1+cu118 \
+        torchaudio==2.7.1+cu118
+    python3 -m pip install --no-cache-dir --upgrade --upgrade-strategy only-if-needed \
+        -r /opt/seeg/container/requirements-competition.txt
+    python3 -m pip install --no-cache-dir \
+        -r /opt/seeg/container/requirements-extra.txt
+    python3 -m pip check
+    python3 /opt/seeg/container/verify_environment.py
+    python3 -m pip freeze --all | sort > /opt/seeg/container/pip-freeze.txt
+
+%environment
+    export PYTHONNOUSERSITE=1
+    export PYTHONUNBUFFERED=1
+    export MPLBACKEND=Agg
+    export MPLCONFIGDIR=/tmp/seeg-matplotlib
+    export NUMBA_CACHE_DIR=/tmp/seeg-numba
+    export PIP_DISABLE_PIP_VERSION_CHECK=1
+    export SEEG_CONTAINER_ROOT=/opt/seeg
+
+%runscript
+    exec python3 "$@"
+
+%test
+    export MPLCONFIGDIR=/tmp/seeg-matplotlib
+    export NUMBA_CACHE_DIR=/tmp/seeg-numba
+    python3 /opt/seeg/container/verify_environment.py

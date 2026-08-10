@@ -1,0 +1,623 @@
+\documentclass{cumcmthesis}
+%\documentclass[withoutpreface,bwprint]{cumcmthesis} %去掉封面与编号页。
+
+%声明：本模板基于CUMCMThesis项目修改而来，适用于
+%仅供学习交流使用，侵删
+%author：ShenaoW from XDU SCE
+%cooperator：
+%email：shenaowang@foxmail.com
+%date：2026.07.19
+
+\usepackage[framemethod=TikZ]{mdframed}
+\usepackage{url}   % 网页链接
+\usepackage{subcaption} % 子标题
+\usepackage{color}
+\definecolor{tabcolor}{RGB}{42, 110, 63} % 这里定义表格的线宽颜色
+% 伪代码
+\usepackage[noend]{algpseudocode}
+\usepackage{algorithmicx,algorithm}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning}
+% 页眉页脚
+\usepackage{lastpage}
+\usepackage{fancyhdr} % 导入fancyhdr包
+\pagestyle{fancy}
+% 图表按章节编号，公式统一不编号
+\usepackage{amsmath}
+\numberwithin{figure}{section} % 图按章节编号
+\numberwithin{table}{section} % 表按章节编号
+
+
+
+% 设置封面页内容
+\titlename{祈祷一个好头}
+\email{黄羽霖、脱晓颖}
+\yearinput{2026}
+\monthinput{07}
+\dayinput{20}
+
+% 页眉设置
+\fancyhead[L]{}
+\fancyhead[R]{}
+\fancyhead[C]{\zihao{-5} 基于 SEEG 的癫痫发作状态智能检测算法方案}
+% 页脚设置
+%\fancyfoot[L]{左页脚}
+\fancyfoot[C]{\zihao{-5} 第\thepage 页 \enspace 共 \pageref{LastPage} 页} % 页码
+%\fancyfoot[R]{右页脚}
+\renewcommand{\headrulewidth}{0.5pt} % 页眉分隔线宽度0.5磅
+%\renewcommand{\footrulewidth}{0.5pt}  % 页脚分隔线宽度0.5磅
+
+\newcommand{\makeothertitle}{}
+\begin{document}
+	
+% 将\usepackage{ulem}宏包中的\emph{}还原为斜体
+\normalem
+
+% 生成封面页和填写说明页	
+\maketitle
+ 
+% 生成目录
+\newpage
+\thispagestyle{empty}
+\tableofcontents
+\newpage
+ 
+% 生成图目录
+\thispagestyle{empty}
+\listoffigures
+\newpage
+
+% 生成表目录
+\thispagestyle{empty}
+\listoftables
+\newpage
+
+% 从此处开始编页
+\setcounter{page}{1}
+ 
+%中文摘要
+\begin{cnabstract}
+
+本方案面向多通道 SEEG 发作状态检测，提出质量感知的状态转变与动态传播联合网络 QST-DPGNet。数据侧通过患者级隔离、近重复指纹、元数据对照模型和患者身份探针排查泄漏；模型侧以多尺度时域—时频编码为基础，通过解剖—功能动态双图描述发作前基线、onset 早期和传播阶段的网络变化，并设置片段状态头、帧级状态头、onset 边界头和通道募集头，在统一机制链上生成二分类标签、六位小数发作概率、片段内 onset 及 Top-10 通道。onset 由状态持续性、边界峰值和变化点证据联合确定；阳性通道排序限定在 onset 早期窗口，综合募集强度、激活潜伏期、节律演化、动态图外流、跨发作重复性和伪迹风险，并通过充分性、必要性及扰动稳定性损失直接优化排序忠实性。在可靠坐标和个体影像可用时，条件性执行接点解剖映射、脑区候选分数聚合和三维传播展示；坐标缺失、配准超限或定位不稳定时自动退回接点级输出并保留弃权标记。该定位仅表示当前植入覆盖范围内的候选 SOZ 接点与早期传播网络，不属于分布式脑源逆成像，也不推断未覆盖脑区。方案设置手工特征基线、共享 TCN 强基线、候选主模型和部署模型四级体系，以预先确定的保留门槛决定复杂模块是否进入最终方案，并明确不将 Top-10 或脑区候选分数直接解释为致痫区或手术靶点。
+
+	
+\cnkeywords{SEEG \quad 癫痫发作检测 \quad 发作起始点定位 \quad 关键通道识别 \quad 时序信号建模 \quad 图时序建模 \quad 脑机接口 \quad 医学人工智能 \quad 轻量化部署}
+\end{cnabstract}
+
+\clearpage
+
+
+\section{总体技术路线}
+
+QST-DPGNet 模型以“发作状态转变与动态传播联合建模”为核心，构建“质量感知预处理—多尺度表征学习—状态与边界识别—早期募集和传播建模—关键通道排序—轻量化部署”的端到端检测体系。
+模型不把发作理解为瞬时的二值切换，而是刻画发作间期背景、短暂异常、发作起始及早期募集、后续传播和广泛同步之间的时间演化。共享通道编码器提取局部波形与节律变化，时频分支描述持续性频谱演化，解剖—功能动态图刻画通道募集及传播方向，联合输出片段概率、帧级状态概率、onset 边界概率和通道募集强度。整体技术路线如图~\ref{fig:technical-route} 所示：
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+    node distance=3mm and 4mm,
+    route/.style={draw, rounded corners=1pt, align=center, font=\zihao{-5}, text width=2.25cm, minimum height=0.72cm, inner sep=3pt},
+    arrow/.style={-{Latex[length=1.5mm]}, line width=0.45pt}
+]
+    \node[route] (input) {多通道 SEEG\\输入};
+    \node[route, right=of input] (quality) {采样率统一、滤波、坏道与伪迹处理};
+    \node[route, right=of quality] (encode) {多尺度局部\\时域与时频编码};
+    \node[route, right=of encode] (graph) {解剖—功能\\动态双图};
+    \node[route, right=of graph] (temporal) {长程时序\\依赖建模};
+    \node[route, below=8mm of temporal] (state) {片段与帧级\\状态输出};
+    \node[route, left=of state] (onset) {onset 边界\\与持续性约束};
+    \node[route, left=of onset] (channels) {通道募集、\\Top-10 排序};
+    \node[route, left=of channels] (result) {概率校准、\\结果格式化};
+    \draw[arrow] (input) -- (quality);
+    \draw[arrow] (quality) -- (encode);
+    \draw[arrow] (encode) -- (graph);
+    \draw[arrow] (graph) -- (temporal);
+    \draw[arrow] (temporal) -- (state);
+    \draw[arrow] (temporal) -- (onset);
+    \draw[arrow] (graph) |- (channels);
+    \draw[arrow] (state) -- (onset);
+    \draw[arrow] (onset) -- (result);
+    \draw[arrow] (channels) -- (result);
+\end{tikzpicture}
+\caption{基于状态转变与动态传播联合建模的总体技术路线}
+\label{fig:technical-route}
+\end{figure}
+
+
+
+状态识别、起始点定位和通道排序在统一机制链上联合学习。帧级状态头判断某一时刻是否处于发作状态，边界头定位状态转变，通道募集头估计各通道在 onset 附近被异常募集的时间和强度；片段标签与概率由状态序列聚合得到，onset 由状态和边界证据联合确定，Top-10 则由早期募集、持续演化和网络传播特征产生。坐标和个体影像可用时，再将接点级结果条件性映射到三维空间和脑区；缺少空间数据时不影响比赛基本输出。该设计避免将通道解释降为分类完成后的附加可视化。
+
+
+\subsection{数据条件的合理假设}
+
+
+由于比赛尚未完全公开样本文件结构、采样率、通道命名规则和片段长度，本方案作如下合理假设：输入数据包含若干通道的连续 SEEG 信号及对应通道 ID；采样率可能位于 256 Hz 至 2 kHz 区间；每个样本具备发作期或发作间期标签，发作期样本至少包含片段内 onset 标注或可由训练集标注文件推导得到。若实际数据格式不同，应在数据读取层和标签映射层进行适配，不改变核心算法框架。
+\begin{table}[htbp]
+    \centering
+    \zihao{5}
+    \caption{数据条件与校准方式}
+    \label{tab:data-conditions}
+
+    \renewcommand{\arraystretch}{1.5}
+    \setlength{\tabcolsep}{5pt}
+
+    \begin{tabularx}{\linewidth}{@{}
+        p{0.15\linewidth}
+        p{0.35\linewidth}
+        X
+    @{}}
+        \toprule[1pt]
+        
+        \multicolumn{1}{c}{\textbf{项目}} &
+        \multicolumn{1}{c}{\textbf{初始假设}} &
+        \multicolumn{1}{c}{\textbf{数据到位后的校准方式}}  \\
+        \midrule
+
+        数据组织 &
+        每个样本包含通道 ID、采样率及形状为
+        $C \times T$ 的波形 &
+        编写数据审计程序，核验张量方向、单位、
+        缺失值和通道命名规则  \\
+
+        采样率&原始采样率不低于 256 Hz，可能存在多种采样率	& 统计全量采样率分布，选择 256 Hz 或 512 Hz 统一建模\\
+        信号单位	& 以 μV 或可换算为 μV 的物理量存储	& 结合元数据与幅值分位数核验，不根据文件类型直接推断\\
+        工频	& 数据以 50 Hz 工频为主	& 根据功率谱峰值自动识别 50/60 Hz，并与采集元数据核对\\
+        通道数	& 不同患者或样本的通道数可能不同& 使用通道掩码、共享通道编码器和可变长通道聚合\\
+        片段长度	& 样本长度可能固定，也可能变化	& 统一采用滑窗推理，末端补齐并记录有效长度掩码\\
+        标签粒度	& 至少包含片段级标签，部分或全部发作样本具有 onset 标注	& 按标注粒度选择强监督、弱监督或伪标签定位策略\\
+        数据划分& 	同一患者可能包含多个样本或多次发作	& 训练、验证和测试均以患者为最小隔离单元\\
+        空间信息	& 通道 ID 必有，三维电极坐标可能缺失	& 有坐标时加入空间邻接；无坐标时使用信号相关动态图\\
+        影像与解剖信息& 	术前 MRI、术后 CT、脑区标签及 DWI 可能不提供	& 按数据可用性逐级启用接点解剖映射、脑区聚合或研究性结构先验\\
+        输出格式	& 每个样本输出标签、概率和 Top-10；阳性样本输出 onset	& 以官方提交模板和评测脚本为最终格式依据\\
+        \bottomrule[1pt]
+
+    \end{tabularx}
+\end{table}
+
+数据到位后，按表~\ref{tab:data-conditions} 进行相关处理：首先统计采样率、片段时长、通道数、幅值单位、缺失比例、工频峰值、类别比例、患者样本量、发作持续时间和 onset 标注精度。预处理带宽、窗口长度、输出帧率及模型容量均依据审计结果重新确定。
+
+
+\subsection{医学机制与算法设计映射}
+
+本任务需要区分发作间期短暂异常与具有持续演化、早期募集和网络传播特征的发作活动。棘波、尖波或孤立 HFO 可以出现在发作间期，单纯能量阈值或单帧高概率不足以支持发作判断；同样，发作传播期振幅最大的通道也未必是最早募集通道。
+因此，我们设计的模型以状态转变和传播次序作为主要判别依据（如表~\ref{tab:clinical-response} 所示）。该映射决定模型的学习目标、图结构和通道排序规则。核心创新为发作状态转变与动态传播联合建模；onset 感知的早期通道排序和质量感知的轻量推理作为两项支撑设计。
+
+\begin{table}[htbp]
+    \centering
+    \zihao{5}
+    \caption{临床电生理认知与算法响应}
+    \label{tab:clinical-response}
+
+    \renewcommand{\arraystretch}{1.5}
+    \setlength{\tabcolsep}{5pt}
+
+    \begin{tabularx}{\linewidth}{@{}
+        p{0.50\linewidth}
+        X
+    @{}}
+        \toprule[1pt]
+        \multicolumn{1}{c}{\textbf{临床电生理认识}} &
+        \multicolumn{1}{c}{\textbf{算法响应}} \\
+        \midrule
+
+        发作间期可出现棘波、尖波和短暂 HFO	 &建立困难负样本库，以持续性、节律演化和跨帧状态约束排除孤立异常 \\
+        发作不是瞬间的 $0\rightarrow1$ 切换	 &设置帧级状态头、onset 边界头及状态转移损失 \\
+        起始区、早期募集区与晚期传播区并不等价 &	预测通道—时间募集矩阵，并在内部区分起始候选、早期传播和晚期传播 \\
+        波幅最大或分类贡献最高的通道不一定最早	 &Top-10 重点纳入 onset 潜伏期、早期演化和传播上游性 \\
+        SEEG 只记录植入电极覆盖的部分脑网络	 &所有定位结论限定在当前采样覆盖范围内 \\
+        SOZ、致痫区（EZ）和手术处理区域概念不同 &	Top-10 不直接表述为 EZ，也不自动推导切除边界\\
+        \bottomrule[1pt]
+
+    \end{tabularx}
+\end{table}
+
+
+本方案所述“定位”特指当前 SEEG 植入覆盖范围内的候选发作起始接点与早期传播网络估计，不是传统头皮 EEG/MEG 逆问题意义上的分布式脑源成像。只有在具备接点三维坐标及个体影像时，才将接点级结果映射为脑区级候选分布；不利用有限 SEEG 观测强行推断未植入区域，也不将候选 SOZ 接点直接等同于致痫区（EZ）。
+
+
+\subsection{核心技术假设与创新边界}
+本方案与现有其他深度学习相关模型算法的差异不在于单独使用多尺度卷积、时频分析或图网络，而在于将片段检测、状态边界定位和关键通道排序统一解释为发作状态转变及其跨通道传播过程，并用任务间一致性约束检验该解释。为避免把未经数据验证的结构预设为优势，核心设计按表~\ref{tab:technical-hypotheses} 进行可证伪验证。
+
+\begin{table}[htbp]
+	\centering
+    \zihao{5}
+	\caption{技术假设对应表}
+    \label{tab:technical-hypotheses}
+    \renewcommand{\arraystretch}{1.5}
+    \setlength{\tabcolsep}{4pt}
+    \begin{tabularx}{\linewidth}{@{}
+        p{0.06\linewidth}
+        p{0.25\linewidth}
+        p{0.28\linewidth}
+        X
+    @{}}
+
+		\toprule[1pt]
+		\textbf{编号	} & \textbf{	待验证技术假设} & \textbf{核心验证指标} & \textbf{假设不成立时的处理}\\
+		\midrule
+		H1	&发作前、起始期和传播期的连接变化比静态图更有助于跨患者检测	&患者 F1、PR-AUC、onset MAE、折间方差	&退化为不含动态图的共享 TCN，不保留无稳定增益的图模块\\
+		H2	&onset 专项边界监督优于仅从分类概率后处理得到起点	&onset MAE、平均有符号误差、±1 s/±3 s 命中率&保留帧级状态概率、滞回与变化点校正，移除边界头\\
+        H3	&通道忠实性约束能够提高 Top-10 的必要性、充分性和稳定性	&Top-10 遮挡下降、仅保留 Top-10 后的性能保持率、Jaccard/NDCG	&	取消训练期忠实性约束，使用募集分数与离线归因校正\\
+        H4	&一次前向快速评分能够近似深度归因的通道排序	&与遮挡、积分梯度的排名相关性及端到端时延&	对低一致性病例启用离线深度解释，不将其纳入基础快速链路\\
+        H5	&在坐标和影像可用时，空间约束与接点—脑区映射能够提高跨发作定位一致性和临床可读性	&空间距离、跨发作一致性、弃权后错误率	&关闭脑区级输出，仅保留官方通道 ID、接点排序与传播顺序\\
+
+		\bottomrule[1pt]
+	\end{tabularx}
+\end{table}
+同时，各假设的保留门槛应在查看测试结果前，根据训练折内重复实验和目标硬件预算预先确定。若改善幅度不超过折间随机波动，或以不可接受的时延、校准误差和定位退化为代价，则优先采用较简单模型。需要指出的是，QST-DPGNet 目前仅作为模型简称，用于承载本文的结构设计；最终名称及具体模块以工程验证结果为准。
+
+
+
+%\subsection{特色描述}
+
+%\subsection{应用前景分析}
+
+\clearpage
+
+\section{任务难点与设计原则}
+
+SEEG 具有通道数量多、采样频率高、空间分布不规则和患者间植入方案不一致等特征。同一发作在不同脑区、不同患者和不同发作阶段可能呈现不同形态；局部低幅快活动、节律性尖波、高频能量上升、谱结构变化和跨通道同步增强均可能构成有效证据，但不存在适用于全部患者的单一波形模板。
+
+跨受试者泛化是首要约束。患者身份、植入位置、参考方式及记录设备可能形成强于疾病状态的统计特征。若模型依赖固定通道序号或患者特有幅值分布，随机样本划分会产生虚高结果。方案因此采用患者级划分、通道共享编码、稳健标准化、通道缺失增强和患者均衡采样，限制模型对固定植入布局和绝对幅值的依赖。
+
+类别不平衡同时存在于患者级、样本级和帧级。发作期样本通常少于发作间期样本；一个阳性片段内，真正发作区间也可能短于背景区间。本方案采用患者—类别双重均衡采样、类别加权损失、困难负样本挖掘和边界加权监督，不使用简单复制少数类样本作为主要平衡手段。
+
+onset 定位要求模型保留足够的时间分辨率。仅对完整片段执行全局池化，即使分类准确，也难以恢复发作起点。方案在网络中保留帧率为 8～16 Hz 的帧级输出，通过概率平滑、连续阳性、滞回阈值和变化点检测抑制孤立误报，并显式校正滤波群延迟、滑窗中心位置和补齐区间。
+
+通道贡献与临床起始先后不能混为一谈。晚期传播通道可能具有更大振幅和更高分类贡献，却不是最早募集通道。因此，正式排序以 onset 邻域内的募集潜伏期、持续演化和传播上游性为主，注意力、梯度和遮挡主要承担离线验证作用；结果限定为当前植入覆盖范围内的“片段级重要通道”，不直接解释为发作起始区、致痫区或手术靶点。
+
+低时延推理从网络结构、数据流水线和解释计算三方面共同控制。正式链路采用一次前向得到状态、边界、募集及图外流特征，并通过滤波缓存、STFT 缓存、重叠窗口特征复用和批量推理减少重复计算；积分梯度和遮挡仅用于离线验证。最终以目标硬件上的端到端时延为评价依据，不以单次神经网络前向耗时替代系统耗时。
+
+
+\clearpage
+
+\section{数据预处理与样本构建}
+\subsection{数据审计与泄漏排查}
+数据到位后先冻结审计程序和患者级划分规则，再开展模型训练。审计表至少包括样本数、患者数、每位患者发作次数、患者级类别比例、通道数、采样率、片段长度、缺失比例、参考方式、设备信息以及 onset 在片段中的位置分布。除总体分布外，还需检查上述字段与标签、患者 ID 的关联，防止模型利用采集流程差异代替电生理证据。
+
+泄漏排查设置三类对照。第一，使用文件哈希、降采样波形和归一化频谱进行重复及近重复检测，并结合聚类结果确认同一连续记录的高度相关片段未跨训练集和验证集。第二，仅使用片段长度、采样率、通道数、文件大小、缺失比例和通道命名等元数据训练简单分类器；若患者级验证性能异常高，应追溯采集或标注流程偏差。第三，在主模型冻结的中间表征上训练患者 ID 探针，评价表征中患者特异信息的可分性。患者 ID 容易预测并不自动证明泄漏，但若同时伴随跨患者性能下降，则需加强患者均衡采样、通道共享编码和稳健标准化；梯度反转式去身份化仅在消融验证有效时启用，以免删除与发作相关的真实个体差异。
+
+对 onset 标注，统计标注时间分辨率、取整方式、相对片段边界的位置以及多专家差异；检查是否存在固定延迟或不同标注者之间的系统偏差。所有近重复阈值、元数据探针和患者身份探针只用于训练数据审计，不根据测试标签调整。审计结果形成版本化报告，并作为确定滤波带宽、窗口长度、分层抽样和评价指标的依据。
+
+\subsection{重采样与滤波}
+当原始采样率不低于 512 Hz，且数据中存在稳定的 100 Hz 以上判别信息时，统一重采样至 512 Hz，以保留较高频活动；若原始数据主要为 256 Hz，或比赛算力约束较强，则统一至 256 Hz，并将有效带宽限制在奈奎斯特频率以下。重采样采用带抗混叠滤波的多相 FIR 方法，避免直接抽取造成频谱混叠。
+
+默认带通范围设为 0.5～180 Hz（512 Hz 模式）或 0.5～100 Hz（256 Hz 模式）。高通部分抑制基线漂移，低通部分抑制无效高频噪声。工频处理采用窄带 IIR 陷波或频域自适应抑制，在 50 Hz 及落入有效带宽的谐波处设置陷波；若数据来自 60 Hz 工频环境，则按功率谱峰值自动切换。
+
+分类任务可以比较离线零相位滤波与因果滤波，但 onset 定位必须单独核验边界泄漏。正式方案优先采用线性相位 FIR 并补偿群延迟，或使用因果 IIR 并标定系统延迟，防止滤波器将发作后信息扩散至 onset 之前。片段边缘采用反射补齐，补齐区域不参与帧级损失和 onset 搜索。
+
+
+\subsection{坏道检测与伪迹处理}
+对每个通道计算缺失值比例、恒定值比例、幅值中位绝对偏差、峰峰值、饱和比例、线噪声比、谱熵以及与其他通道的相关性。出现长时间恒定、严重缺失、幅值显著偏离患者内分布、工频能量异常集中或持续削顶的通道标记为疑似坏道。
+
+坏道不直接从张量中删除，而是生成通道有效掩码。短时缺失可采用线性或样条插值；整段失效通道置零并由掩码阻断其图连接、注意力和池化贡献。训练阶段随机执行通道丢弃，以提高模型对测试时通道缺失的适应能力。
+
+肌电、运动、电极爆裂等伪迹通过幅值突变、宽带同步增能、高频谱斜率和通道一致性联合识别。疑似伪迹帧保留质量评分，而不直接删除全部高频活动，因为发作起始本身可能表现为低幅快活动。质量评分作为模型附加输入，并用于调整 onset 触发阈值。
+
+\subsection{参考重构}
+若原始数据已使用统一参考，首先保留该版本作为基线。随后比较共同平均参考、稳健共同平均参考和双极参考。稳健共同平均参考仅使用质量合格通道，并采用截尾均值降低异常通道影响。若通道命名能够恢复同一电极杆上的接点顺序，则构建相邻接点双极导联。
+
+双极参考有助于抑制远场共同成分，但会改变通道 ID 语义。Top-10 必须严格输出官方输入和提交模板定义的通道 ID：若官方通道本身为双极导联，则直接保留双极 ID；仅当官方要求输出物理接点且提供单极—双极映射时，才将双极归因分配回原始接点。具体映射规则在数据审计后固化，禁止用模型内部索引替代官方 ID。
+
+\subsection{幅值标准化}
+采用患者内或片段内的稳健标准化：
+\begin{equation*}
+\tilde{x}_{c,t}
+=
+\operatorname{clip}\left(
+\frac{
+    x_{c,t}-\operatorname{median}(x_c)
+}{
+    1.4826\,\operatorname{MAD}(x_c)+\varepsilon
+},
+-q,q
+\right).
+\end{equation*}
+其中，$q$ 初始取 8～12。若提供足够长的患者基线，优先使用患者发作间期统计量；若测试患者完全未知，则使用片段内稳健统计量，并将原始对数幅值尺度作为附加特征，避免标准化完全抹去具有判别力的幅值变化。
+
+\subsection{滑窗切片与标签对齐}
+
+主分类窗口初始设为 4 s，步长设为 0.5 s，模型内部保持约 0.125 s 的输出帧间隔。4 s 窗口通常能够覆盖节律演化，同时不会使局部发作证据被过长背景稀释。若数据审计显示典型发作演化较慢，可增加 8 s 上下文分支，但仍保留高分辨率帧级输出。
+
+窗口标签不采用“只要包含一个发作采样点即判为阳性”的简单规则，而根据窗口内发作占比和 onset 位置设置。发作占比高于阈值 $r_+$ 的窗口作为片段级阳性；完全位于发作间期且距 onset 超过安全间隔的窗口作为阴性；跨越边界但发作占比较低的窗口保留帧级标签，同时降低片段级损失权重。发作前期是否作为阴性应严格依据比赛定义，不能与发作预测或预警任务混用。
+
+帧级监督按照标注条件分级实施。若同时提供 onset 和 offset，则构建完整状态分割标签，并对两个边界分别设置软标签；若只提供 onset，则边界头接受强监督，onset 后状态头仅在能够确定的区间接受部分标签监督，其余区间通过多实例约束学习；若只有片段标签，则采用多实例学习和一致性正则，不宣称模型获得了充分的精确定位监督。基于能量变化生成的募集伪标签仅作为辅助训练信号，不作为临床真值。
+
+训练、验证、交叉验证均以患者为最小划分单位。同一患者的不同发作、相邻切片和增强样本不得跨集合。超参数选择及概率校准只能使用训练折内的患者级验证集。
+
+\subsection{跨受试者数据增强}
+
+增强方式包括幅值缩放、低强度有色噪声、随机时间遮挡、频带遮挡、随机通道丢弃、通道顺序扰动、轻微基线漂移和局部增益变化。时间拉伸、裁剪或拼接会改变 onset，只有在同步变换帧级标签和 onset 标注时才使用。频率平移幅度应严格受限，避免破坏具有临床含义的节律位置。
+
+Mixup 仅在相同参考方式、相近采样条件和相同标签类别内使用。具有 onset 标注的发作样本不采用会破坏边界语义的普通 Mixup。所有增强强度通过患者级验证集确定，并同时检查 Recall、Specificity 和 onset MAE。
+
+\subsection{电极坐标与解剖映射（条件模块）}
+
+若官方提供已质控的接点三维坐标和脑区标签，直接采用官方定义并保留坐标系、单位及通道 ID 映射，不另行重定位。若同时提供术前 T1 MRI 与术后 CT，则执行 CT–MRI 刚体配准、接点中心提取、个体脑分区映射和人工质控；必要时评估金属伪影、配准误差及接点位于灰质、白质或脑区边界的情况。每个接点除坐标外，还记录脑区归属权重和定位不确定度，避免把边界接点强制分配给单一脑区。
+
+接点解剖映射属于条件性输入处理，不改变仅有波形和通道 ID 时的基本推理链路。训练、验证和测试使用相同的坐标系及脑区字典；标准空间坐标不能替代个体影像质控。若配准误差超过预设阈值、通道—坐标对应关系不完整或影像来源无法核验，则关闭脑区级输出，仅保留官方通道 ID 的接点级排序。
+
+
+\clearpage
+
+\section{发作状态识别模型设计}
+
+%## 四、发作状态识别模型设计
+
+\subsection{输入张量}
+
+单个模型窗口表示为：
+
+$$
+X\in\mathbb{R}^{B\times C\times T},
+$$
+
+其中，$B$ 为批量大小，$C$ 为通道维度（批次内补齐后的通道数），$T=L\cdot f_s$。模型同时接收通道有效掩码 $M\in\{0,1\}^{B\times C}$、帧有效掩码，以及可选的电极坐标、接点—脑区软映射和坐标质量评分。不同样本通道数不一致时，在批次内补齐至最大通道数；补齐通道不参与归一化、图连接、池化和损失计算。空间信息缺失时采用显式掩码，不以零坐标伪装为真实解剖位置。
+
+\subsection{主模型架构：QST-DPGNet}
+
+主模型命名为质量感知的 SEEG 状态转变与动态传播网络 QST-DPGNet（Quality-aware State Transition and Dynamic Propagation Graph Network）。其核心不是叠加多种通用模块，而是用共享表征联合回答三个问题：何时由背景转入发作、哪些通道最先被募集、异常活动如何在已植入通道之间传播。
+
+\subsubsection{局部时域特征提取}
+
+各通道共享同一组一维卷积参数，避免模型记忆固定通道编号。时域编码器由三条深度可分离卷积分支构成，其感受野分别覆盖短时尖波、中等节律和慢速形态变化。在 512 Hz 下，可采用 7、31、127 点卷积核，后接逐点卷积、归一化、SiLU 激活和残差连接。
+
+共享编码器将各通道投影至统一表征空间。深度可分离卷积降低参数量，多尺度卷积避免仅用固定波形宽度描述发作形态，适合 SEEG 中尖波、快速活动和缓慢节律演化并存的情况。
+
+\subsubsection{时频特征增强}
+
+时频分支采用可微滤波器组或 STFT 对数功率特征。初始频带包括 δ、θ、α、β、低 γ 和高 γ，并增加工频邻域质量特征。对于 512 Hz 数据，可评估 80～180 Hz 频段，但仅在抗混叠和伪迹控制可靠时纳入主模型。
+
+时频特征经轻量二维卷积或逐频带线性映射后，与时域特征在相同帧率下进行门控融合：
+
+$$
+H_{c,k}=
+G_{c,k}\odot H^{\mathrm{time}}_{c,k}
++(1-G_{c,k})\odot H^{\mathrm{tf}}_{c,k}.
+$$
+
+该结构既保留从原始波形学习非预设形态的能力，也显式提供节律性增能和频谱迁移证据。
+
+\subsubsection{解剖—功能动态双图}
+
+通道关系由静态解剖图和时变功能图构成：
+
+$$
+A_t=\lambda_aA^{\mathrm{anatomy}}+\lambda_fA_t^{\mathrm{functional}}.
+$$
+
+静态解剖图 $A^{\mathrm{anatomy}}$ 由电极空间距离、同一电极杆相邻关系和可选脑区信息构建；时变功能图 $A_t^{\mathrm{functional}}$ 由滞后相关、相位滞后指标和特征驱动的有向连接共同估计。相较仅使用对称相关或相干性，有向滞后关系能够提供“先募集—后响应”的传播线索。共同参考可能放大零时滞相关，因此零时滞同步只作为辅助边权，不直接解释为传播方向。
+
+图网络分别汇总发作前基线、onset 早期和传播阶段的关系，重点学习相对基线的结构变化：
+
+$$
+\Delta A_t=A_t-A_{\mathrm{baseline}}.
+$$
+
+基线优先取同一片段内 onset 前的质量合格区间；片段不含足够基线时，依次使用该患者独立发作间期统计量和仅由训练集构建的分层参考原型，禁止由测试标签反推基线。每个节点只保留 Top-$k$ 有效邻居，并保留节点自身残差，兼顾计算效率与局灶活动。若没有三维坐标或脑区标签，则删除解剖图分支，将模型明确表述为“信号驱动的动态功能图”，不推断未被电极采样的脑区，也不声称完成解剖意义上的脑源定位。
+
+通道 ID 默认不作为固定嵌入直接输入模型，避免在跨患者条件下形成通道编号依赖。只有训练集和测试集共享严格一致的电极定义时，才将通道 ID 作为弱辅助信息。
+
+\subsubsection{长程时序依赖建模}
+
+通道特征经掩码注意力池化形成帧序列 $Z\in\mathbb{R}^{B\times K\times D}$。长程建模采用扩张深度可分离 TCN 与轻量门控注意力组合。TCN 处理局部至中长程节律演化，线性复杂度注意力补充较远时间位置之间的依赖。
+
+与完整 Transformer 相比，该结构对长 SEEG 序列的内存开销更低，部署算子更稳定，也更适合 ONNX、TensorRT 和 CPU 推理。网络保持固定帧率，不在中间层过早执行全局池化。
+
+\subsubsection{状态—边界—募集联合输出头}
+
+模型设置帧级状态、onset 边界和通道募集三个时间级输出：
+
+$$
+p_t^{\mathrm{state}}=\Pr(t\text{ 时刻处于发作状态}),
+$$
+
+$$
+p_t^{\mathrm{onset}}=\Pr(t\text{ 时刻为发作转变边界}),
+$$
+
+$$
+r_{c,t}=\Pr(\text{通道 }c\text{ 在时刻 }t\text{ 被异常募集}).
+$$
+
+片段概率由质量加权的状态序列池化产生：
+
+$$
+p_{\mathrm{clip}}=
+\sigma\left(
+W_c\sum_k\alpha_kZ_k+b_c
+\right).
+$$
+
+片段概率不直接取帧概率最大值，以降低单个棘波或伪迹帧导致整段误判的风险。状态头与边界头联合产生 onset，募集头同时保留通道维与时间维，用于区分早期募集和后续传播。三者通过一致性约束连接：高边界概率之后应出现持续的状态概率上升；通道募集活动应在候选 onset 附近出现，并在传播期形成合理的时序扩展。
+
+\subsubsection{损失函数}
+
+联合损失定义为：
+
+$$
+\mathcal{L}=
+\lambda_1\mathcal{L}_{\mathrm{clip}}
++\lambda_2\mathcal{L}_{\mathrm{state}}
++\lambda_3\mathcal{L}_{\mathrm{onset}}
++\lambda_4\mathcal{L}_{\mathrm{transition}}
++\lambda_5\mathcal{L}_{\mathrm{recruit}}
++\lambda_6\mathcal{L}_{\mathrm{fidelity}}
++\lambda_7\mathcal{L}_{\mathrm{reg}}.
+$$
+
+其中，片段损失采用类别加权 BCE 或非对称 Focal Loss；状态损失按可用标注采用 Focal BCE 与 Soft Dice；onset 损失使用以专家标注为中心的窄高斯软标签，降低逐帧硬边界对标注差异的敏感性；状态转移损失惩罚孤立高概率和不合理的频繁切换，并约束边界后具有最小持续时间；募集损失对通道弱标签或人工标注进行学习；忠实性损失使 Top-10 排序成为直接优化目标；正则项包括动态图稀疏、方向一致性和权重衰减。
+
+若没有通道—时间真值，则以 onset 邻域相对基线的持续频谱变化、线长变化和跨通道时滞生成弱募集标签，并以多视图一致性限制伪标签噪声。通道募集头属于辅助学习任务，其输出只用于排序和证据组织，不将弱标签描述为临床真值。若只有片段标签，则采用多实例学习，且在报告中明确定位监督不足。
+
+\subsubsection{Top-10 忠实性约束}
+
+训练期由募集头产生软通道门控 $g_c\in[0,1]$，并以 $X\odot g$ 表示主要保留高分通道的输入，以 $X\odot(1-g)$ 表示抑制高分通道后的输入。充分性损失要求保留高分通道后仍能维持原始判断：
+
+$$
+\mathcal{L}_{\mathrm{suff}}=
+\left|\mathrm{sg}[z(X)]-z(X\odot g)\right|,
+$$
+
+其中 $\mathrm{sg}$ 表示停止梯度，避免原始分支为缩小差值而反向适配软门控。
+
+必要性损失要求移除高分通道后，阳性样本的发作 logit 至少下降给定间隔 $m$：
+
+$$
+\mathcal{L}_{\mathrm{nec}}=
+\max\left(0,\,
+m-[z(X)-z(X\odot(1-g))]
+\right).
+$$
+
+稳定性损失约束原始样本与轻微噪声、时间偏移或通道丢弃样本 $\tilde X$ 的软排序一致：
+
+$$
+\mathcal{L}_{\mathrm{stable}}=
+D\left(S(X),S(\tilde X)\right),
+$$
+
+其中 $D$ 可采用 Jensen–Shannon 散度或可微排序距离。为防止门控退化为保留全部通道，增加目标基数约束 $\left(\sum_c g_c-k\right)^2$，其中 $k=\min(10,C_{\mathrm{valid}})$。忠实性损失定义为三项及基数约束的加权和，主要用于阳性样本；阴性样本采用类别对应的判别充分性约束，不赋予起始区含义。
+
+训练时先在不使用忠实性损失的条件下完成表征预热，再逐步增加 $\lambda_6$。为控制训练成本，软门控主要作用于可复用的逐通道编码特征，并在部分批次上计算；验证阶段再以原始输入遮挡核验其真实性。在缺乏通道真值时不直接使用不可微硬 Top-k，以免早期伪相关被固定。若加入忠实性约束后分类、onset 或跨患者稳定性退化，或其遮挡效果不优于随机通道，则依据 H3 退出条件移除该损失。
+
+\subsection{训练策略} 
+
+训练采用 AdamW 优化器、余弦退火和前若干 epoch 的线性预热。批次采样同时平衡患者与类别，防止样本量较大的患者主导梯度。可先训练时域和时频编码器，再加入通道图与帧级定位头联合微调；若数据规模充足，则直接端到端训练。
+
+困难负样本挖掘重点纳入电极爆裂、运动伪迹、睡眠尖波和周期性放电等易误判片段。早停依据患者宏平均 AUC、F1 和 onset MAE 的综合指标，而非窗口级准确率。
+
+\subsection{概率校准}
+
+模型训练完成后，在完全独立的患者级校准集上执行温度缩放：
+
+$$
+p^{\mathrm{cal}}=\sigma(z/T).
+$$
+
+若校准样本量充足且可靠性曲线呈明显非线性，可比较向量温度缩放和保序回归。最终分类阈值 $\tau$ 依据比赛主指标、灵敏度约束和患者级验证结果确定，不预设为 0.5。输出概率使用校准后的数值并四舍五入至 6 位小数；标签由未舍入概率与阈值比较得到。
+
+
+\input{seeg_solution_continuation.tex}
+
+\newpage
+%附录
+%\begin{appendices}
+%
+%\section{模板所用的宏包}
+%\begin{table}[htbp]
+%    \centering
+%    \caption{宏包罗列}
+%    \begin{tabular}{ccccc}
+%        \toprule
+%        \multicolumn{5}{c}{模板中已经加载的宏包} \\
+%        \midrule
+%        amsbsy & amsfonts & {amsgen} & {amsmath} & {amsopn} \\
+%        amssymb & amstext & {appendix} & {array} & {atbegshi} \\
+%        atveryend & auxhook & {bigdelim} & {bigintcalc} & {bigstrut} \\
+%        bitset & bm    & {booktabs} & {calc} & {caption} \\
+%        caption3 & CJKfntef & {cprotect} & {ctex} & {ctexhook} \\
+%        ctexpatch & enumitem & {etexcmds} & {etoolbox} & {everysel} \\
+%        expl3 & fix-cm & {fontenc} & {fontspec} & {fontspec-xetex} \\
+%        geometry & gettitlestring & {graphics} & {graphicx} & {hobsub} \\
+%        hobsub-generic & hobsub-hyperref & {hopatch} & {hxetex} & {hycolor} \\
+%        hyperref & ifluatex & {ifpdf} & {ifthen} & {ifvtex} \\
+%        ifxetex & indentfirst & {infwarerr} & {intcalc} & {keyval} \\
+%        kvdefinekeys & kvoptions & {kvsetkeys} & {l3keys2e} & {letltxmacro} \\
+%        listings & longtable & {lstmisc} & {ltcaption} & {ltxcmds} \\
+%        multirow & nameref & {pdfescape} & {pdftexcmds} & {refcount} \\
+%        rerunfilecheck & stringenc & {suffix} & {titletoc} & {tocloft} \\
+%        trig  & ulem  & {uniquecounter} & {url} & {xcolor} \\
+%        xcolor-patch & xeCJK & {xeCJKfntef} & {xeCJK-listings} & {xparse} \\
+%        xtemplate & zhnumber &       &       &  \\
+%        \bottomrule
+%    \end{tabular}%
+%    \label{tab:addlabel}%
+%\end{table}%
+%
+%以上宏包都已经加载过了，不要重复加载它们。
+%
+%\section{排队算法--matlab 源程序}
+%
+%\begin{lstlisting}[language=matlab]
+%kk=2;[mdd,ndd]=size(dd);
+%while ~isempty(V)
+%[tmpd,j]=min(W(i,V));tmpj=V(j);
+%for k=2:ndd
+%[tmp1,jj]=min(dd(1,k)+W(dd(2,k),V));
+%tmp2=V(jj);tt(k-1,:)=[tmp1,tmp2,jj];
+%end
+%tmp=[tmpd,tmpj,j;tt];[tmp3,tmp4]=min(tmp(:,1));
+%if tmp3==tmpd, ss(1:2,kk)=[i;tmp(tmp4,2)];
+%else,tmp5=find(ss(:,tmp4)~=0);tmp6=length(tmp5);
+%if dd(2,tmp4)==ss(tmp6,tmp4)
+%ss(1:tmp6+1,kk)=[ss(tmp5,tmp4);tmp(tmp4,2)];
+%else, ss(1:3,kk)=[i;dd(2,tmp4);tmp(tmp4,2)];
+%end;end
+%dd=[dd,[tmp3;tmp(tmp4,2)]];V(tmp(tmp4,3))=[];
+%[mdd,ndd]=size(dd);kk=kk+1;
+%end; S=ss; D=dd(1,:);
+% \end{lstlisting}
+%
+% \section{规划解决程序--lingo源代码}
+%
+%\begin{lstlisting}[language=c]
+%kk=2;
+%[mdd,ndd]=size(dd);
+%while ~isempty(V)
+%    [tmpd,j]=min(W(i,V));tmpj=V(j);
+%for k=2:ndd
+%    [tmp1,jj]=min(dd(1,k)+W(dd(2,k),V));
+%    tmp2=V(jj);tt(k-1,:)=[tmp1,tmp2,jj];
+%end
+%    tmp=[tmpd,tmpj,j;tt];[tmp3,tmp4]=min(tmp(:,1));
+%if tmp3==tmpd, ss(1:2,kk)=[i;tmp(tmp4,2)];
+%else,tmp5=find(ss(:,tmp4)~=0);tmp6=length(tmp5);
+%if dd(2,tmp4)==ss(tmp6,tmp4)
+%    ss(1:tmp6+1,kk)=[ss(tmp5,tmp4);tmp(tmp4,2)];
+%else, ss(1:3,kk)=[i;dd(2,tmp4);tmp(tmp4,2)];
+%end;
+%end
+%    dd=[dd,[tmp3;tmp(tmp4,2)]];V(tmp(tmp4,3))=[];
+%    [mdd,ndd]=size(dd);
+%    kk=kk+1;
+%end;
+%S=ss;
+%D=dd(1,:);
+% \end{lstlisting}
+%\end{appendices}
+
+%算法模板
+%\begin{algorithm}[t]
+%	\caption{algorithm caption} %算法的名字
+%	\hspace*{0.02in} {\bf Input:} %算法的输入， \hspace*{0.02in}用来控制位置，同时利用 \\ 进行换行
+%	input parameters A, B, C\\
+%	\hspace*{0.02in} {\bf Output:} %算法的结果输出
+%	output result
+%	\begin{algorithmic}[1]
+	%		\State some description % \State 后写一般语句
+	%		\For{condition} % For 语句，需要和EndFor对应
+	%		\If{condition} % If 语句，需要和EndIf对应
+	%		\Else
+	%		\EndIf
+	%		\EndFor
+	%		\While{condition} % While语句，需要和EndWhile对应
+	%		a += 1
+	%		\EndWhile
+	%		\State\Return result
+	%	\end{algorithmic}
+%\end{algorithm}
+
+%代码块模板
+%\begin{lstlisting}[language=python]
+%app_tuple_list = []
+%try:
+%browser.get(url)
+%soup = BeautifulSoup(browser.page_source, features='lxml')
+%except requests.HTTPError:
+%return "There are some errors when get the download page!"
+%all_app_tag = soup.find('ul', {"class": "applist", "id": "all-applist"})
+%app_tag = all_app_tag.next
+%\end{lstlisting}
+
+\end{document} 

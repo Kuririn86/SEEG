@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Flydata 文件读取函数使用说明</title>
+  <style>
+    :root {
+      --bg: #f5f7fa;
+      --surface: #ffffff;
+      --text: #1f2937;
+      --border: #dfe4ea;
+      --primary: #2557a7;
+      --primary-soft: #eef4ff;
+      --code-bg: #f6f8fa;
+      --shadow: 0 10px 30px rgba(31, 41, 55, 0.08);
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: "Microsoft YaHei", "PingFang SC", "Noto Sans CJK SC",
+                   -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.75;
+    }
+    .page { max-width: 980px; margin: 40px auto; padding: 0 24px; }
+    .document {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      box-shadow: var(--shadow);
+      padding: 48px 56px 56px;
+    }
+    h1 {
+      margin: 0 0 28px;
+      padding-bottom: 18px;
+      border-bottom: 2px solid var(--primary);
+      color: #173b6c;
+      font-size: 30px;
+      line-height: 1.35;
+    }
+    h2 {
+      margin: 42px 0 16px;
+      padding-left: 12px;
+      border-left: 4px solid var(--primary);
+      color: #173b6c;
+      font-size: 23px;
+    }
+    h3 { margin: 28px 0 12px; color: #234b7c; font-size: 18px; }
+    h4 { margin: 22px 0 10px; color: #334155; font-size: 16px; }
+    p { margin: 10px 0; }
+    ul { margin: 10px 0 16px; padding-left: 24px; }
+    li { margin: 6px 0; }
+    code {
+      font-family: Consolas, "SFMono-Regular", Menlo, Monaco, monospace;
+      font-size: 0.92em;
+    }
+    p code, li code, td code {
+      padding: 2px 6px;
+      border: 1px solid #e4e7ec;
+      border-radius: 5px;
+      background: var(--code-bg);
+      color: #b42318;
+      white-space: nowrap;
+    }
+    pre {
+      margin: 14px 0 20px;
+      padding: 16px 18px;
+      overflow-x: auto;
+      border: 1px solid var(--border);
+      border-radius: 9px;
+      background: var(--code-bg);
+      line-height: 1.55;
+    }
+    pre code { color: #1f2937; white-space: pre; }
+    table {
+      width: 100%;
+      margin: 18px 0 24px;
+      border-collapse: collapse;
+      border: 1px solid var(--border);
+    }
+    th, td {
+      padding: 12px 14px;
+      border: 1px solid var(--border);
+      text-align: left;
+      vertical-align: top;
+    }
+    th { background: var(--primary-soft); color: #173b6c; font-weight: 600; }
+    tr:nth-child(even) td { background: #fbfcfe; }
+    @media (max-width: 700px) {
+      .page { margin: 0; padding: 0; }
+      .document { border: none; border-radius: 0; padding: 28px 20px 40px; box-shadow: none; }
+      h1 { font-size: 25px; }
+      h2 { font-size: 21px; }
+    }
+    @media print {
+      body { background: #fff; }
+      .page { max-width: none; margin: 0; padding: 0; }
+      .document { border: none; box-shadow: none; padding: 0; }
+      pre, table { break-inside: avoid; }
+      h2, h3 { break-after: avoid; }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <article class="document">
+      <h1>Flydata 文件读取函数使用说明</h1>
+<p>Flydata 通过 <code>FlyData</code> 类提供以下两个文件读取方法：</p>
+<ul>
+<li><code>load_file(source_id)</code>：读取任务已申请的非结构化联创资源。</li>
+<li><code>fetch_saved_file(file_path)</code>：读取当前任务此前保存的文件。</li>
+</ul>
+<h2>基本调用方式</h2>
+<p>使用前，需要先导入并创建一个 <code>FlyData</code> 对象：</p>
+<pre><code class="language-python">from flydata import FlyData
+
+handler = FlyData()
+</code></pre>
+<p>此后通过该对象调用文件读取方法：</p>
+<pre><code class="language-python">files = handler.load_file(&quot;training_data_auto&quot;)
+path = handler.fetch_saved_file(&quot;debug/model.pkl&quot;)
+</code></pre>
+<p>同一个脚本中可以重复使用已创建的 <code>handler</code> 对象，无需在每次调用前重新创建。</p>
+<h2>1. <code>load_file(source_id)</code></h2>
+<h3>功能</h3>
+<p><code>load_file</code> 用于读取任务已申请的非结构化联创资源，例如图片集、文本文件、CSV 文件或其他文件集合。</p>
+<pre><code class="language-python">from flydata import FlyData
+
+handler = FlyData()
+
+files = handler.load_file(&quot;training_data_auto&quot;)
+</code></pre>
+<p>其中，<code>training_data_auto</code> 是联创资源的调用 ID。</p>
+<p>调用完成后，方法不仅会返回描述资源目录结构的字典，还会将字典中指明的目录和文件实际放置到当前沙箱的 <code>data_source/&lt;资源ID&gt;/</code> 路径下。用户可以根据返回的目录结构确定文件位置，并通过对应路径直接访问文件。</p>
+<p>例如，该资源中的文件可以通过以下目录访问：</p>
+<pre><code class="language-text">data_source/training_data_auto/
+</code></pre>
+<h3>返回结果</h3>
+<p>方法返回一个字典，用于描述资源中的目录和文件结构。</p>
+<p>假设资源中包含：</p>
+<pre><code class="language-text">training_data_auto/
+├── images/
+│   ├── p1.png
+│   └── p2.png
+└── readme.md
+</code></pre>
+<p>返回结果为：</p>
+<pre><code class="language-python">{
+    &quot;training_data_auto&quot;: {
+        &quot;images&quot;: {
+            &quot;&quot;: [&quot;p1.png&quot;, &quot;p2.png&quot;]
+        },
+        &quot;&quot;: [&quot;readme.md&quot;]
+    }
+}
+</code></pre>
+<p>返回结果中：</p>
+<ul>
+<li>第一层键是资源 ID。</li>
+<li>普通名称键表示子目录，例如 <code>images</code>。</li>
+<li>空字符串键 <code>&quot;&quot;</code> 表示当前目录下直接包含的文件。</li>
+<li>空字符串键对应的值是文件名列表。</li>
+</ul>
+<p>例如：</p>
+<pre><code class="language-python">files[&quot;training_data_auto&quot;][&quot;&quot;][0]
+</code></pre>
+<p>得到：</p>
+<pre><code class="language-text">readme.md
+</code></pre>
+<p>对应的实际文件路径为：</p>
+<pre><code class="language-text">data_source/training_data_auto/readme.md
+</code></pre>
+<p>下面的代码：</p>
+<pre><code class="language-python">files[&quot;training_data_auto&quot;][&quot;images&quot;][&quot;&quot;][0]
+</code></pre>
+<p>得到：</p>
+<pre><code class="language-text">p1.png
+</code></pre>
+<p>对应的实际文件路径为：</p>
+<pre><code class="language-text">data_source/training_data_auto/images/p1.png
+</code></pre>
+<h3>使用示例</h3>
+<h4>读取文本文件</h4>
+<pre><code class="language-python">from flydata import FlyData
+
+handler = FlyData()
+
+handler.load_file(&quot;training_data_auto&quot;)
+
+with open(
+    &quot;data_source/training_data_auto/readme.md&quot;,
+    &quot;r&quot;,
+    encoding=&quot;utf-8&quot;
+) as f:
+    content = f.read()
+</code></pre>
+<h4>读取图片</h4>
+<pre><code class="language-python">from PIL import Image
+from flydata import FlyData
+
+handler = FlyData()
+
+handler.load_file(&quot;training_data_auto&quot;)
+
+image = Image.open(
+    &quot;data_source/training_data_auto/images/p1.png&quot;
+)
+</code></pre>
+<h4>批量读取目录中的图片</h4>
+<pre><code class="language-python">from pathlib import Path
+from PIL import Image
+from flydata import FlyData
+
+handler = FlyData()
+
+files = handler.load_file(&quot;training_data_auto&quot;)
+image_names = files[&quot;training_data_auto&quot;][&quot;images&quot;][&quot;&quot;]
+
+image_dir = Path(&quot;data_source/training_data_auto/images&quot;)
+
+images = [
+    Image.open(image_dir / image_name)
+    for image_name in image_names
+]
+</code></pre>
+<h2>2. <code>fetch_saved_file(file_path)</code></h2>
+<h3>功能</h3>
+<p><code>fetch_saved_file</code> 用于读取当前任务此前保存的文件，例如模型文件、日志、图片或中间计算结果。</p>
+<pre><code class="language-python">from flydata import FlyData
+
+handler = FlyData()
+
+path = handler.fetch_saved_file(&quot;debug/model.pkl&quot;)
+</code></pre>
+<p><code>file_path</code> 是文件在当前任务存储空间中的相对路径。</p>
+<p>路径的第一级目录为：</p>
+<ul>
+<li><code>debug</code>：调试过程保存的文件。</li>
+<li><code>production</code>：生产过程保存的文件。</li>
+</ul>
+<p>例如：</p>
+<pre><code class="language-text">debug/model.pkl
+debug/logs/20260427.txt
+production/images/p1.png
+</code></pre>
+<h3>返回结果</h3>
+<p>方法会将指定文件实际放置到当前沙箱的 <code>fetched_files/</code> 目录下，并返回该文件的可访问路径。用户可以直接将返回路径传入 <code>open</code>、<code>joblib.load</code>、<code>Image.open</code> 等文件读取函数。</p>
+<p>例如：</p>
+<pre><code class="language-python">path = handler.fetch_saved_file(&quot;debug/model.pkl&quot;)
+print(path)
+</code></pre>
+<p>返回：</p>
+<pre><code class="language-text">fetched_files/debug/model.pkl
+</code></pre>
+<p>后续可直接将返回路径传入相应的文件读取函数。</p>
+<h3>使用示例</h3>
+<h4>读取模型文件</h4>
+<pre><code class="language-python">import joblib
+from flydata import FlyData
+
+handler = FlyData()
+
+model_path = handler.fetch_saved_file(&quot;debug/model.pkl&quot;)
+model = joblib.load(model_path)
+</code></pre>
+<h4>读取文本文件</h4>
+<pre><code class="language-python">from flydata import FlyData
+
+handler = FlyData()
+
+log_path = handler.fetch_saved_file(
+    &quot;debug/logs/20260427.txt&quot;
+)
+
+with open(log_path, &quot;r&quot;, encoding=&quot;utf-8&quot;) as f:
+    content = f.read()
+</code></pre>
+<h4>读取图片</h4>
+<pre><code class="language-python">from PIL import Image
+from flydata import FlyData
+
+handler = FlyData()
+
+image_path = handler.fetch_saved_file(
+    &quot;production/images/p1.png&quot;
+)
+
+image = Image.open(image_path)
+</code></pre>
+<h2>3. 两个方法的区别</h2>
+<table>
+<thead>
+<tr>
+  <th>方法</th>
+  <th>读取对象</th>
+  <th>文件访问方式</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>handler.load_file(source_id)</code></td>
+  <td>任务已申请的非结构化联创资源</td>
+  <td>文件位于 <code>data_source/&lt;资源ID&gt;/</code></td>
+</tr>
+<tr>
+  <td><code>handler.fetch_saved_file(file_path)</code></td>
+  <td>当前任务此前保存的文件</td>
+  <td>方法直接返回 <code>fetched_files/</code> 下的文件路径</td>
+</tr>
+</tbody>
+</table>
+<p>使用联创资源时，先调用 <code>handler.load_file</code>。方法会返回目录结构，并将对应文件实际放置在 <code>data_source/&lt;资源ID&gt;/</code> 下，用户可根据返回结果定位并读取文件。</p>
+<p>使用任务此前保存的模型、日志或中间结果时，调用 <code>handler.fetch_saved_file</code>。方法会将文件实际放置在 <code>fetched_files/</code> 下，并返回可以直接使用的文件路径。</p>
+
+    </article>
+  </main>
+</body>
+</html>

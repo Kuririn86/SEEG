@@ -1,0 +1,18 @@
+# Versions published by the competition environment.
+numpy==1.26.4
+pandas==2.3.3
+scipy==1.15.3
+scikit-learn==1.7.2
+pytorch-lightning==2.6.5
+torch-geometric==2.8.0.post1
+mne==1.12.1
+PyWavelets==1.8.0
+h5py==3.16.0
+joblib==1.5.3
+lightgbm==4.7.0
+xgboost==3.2.0
+catboost==1.2.10
+optuna==4.9.0
+matplotlib==3.10.9
+seaborn==0.13.2
+numba==0.66.0
